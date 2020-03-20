@@ -12,6 +12,7 @@
 #include <vita2d.h>
 
 #include "bsdview.h"
+extern int hellocpp(int x);
 
 char str[MAXLEN]= {};
 int key_exit = 0;
@@ -22,8 +23,9 @@ SceTouchData touch_press[SCE_TOUCH_PORT_MAX_NUM];
 SceTouchData touch_release[SCE_TOUCH_PORT_MAX_NUM];
 SceTouchData touch[SCE_TOUCH_PORT_MAX_NUM];
 
-int touch_press_x, touch_press_y, touch_x, touch_y, touch_release_x, touch_release_y; 
-int istouch_press = 0;
+int touch_press_fx, touch_press_fy, touch_fx, touch_fy, touch_release_fx, touch_release_fy; 
+int touch_press_bx, touch_press_by, touch_bx, touch_by, touch_release_bx, touch_release_by; 
+int istouch_press_f = 0 , istouch_press_b = 0;
 int need_update = 1;
 int need_help = 1;
 enum GAMESCREEN gameScreen = MENU;
@@ -61,7 +63,9 @@ int initAll() {
     /* to enable analog sampling */
     sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG);
     sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, 1);
+    sceTouchSetSamplingState(SCE_TOUCH_PORT_BACK, 1);
     sceTouchEnableTouchForce(SCE_TOUCH_PORT_FRONT);
+    sceTouchEnableTouchForce(SCE_TOUCH_PORT_BACK);
     vita2d_init();
     vita2d_set_clear_color(RGBA8(0x00, 0x00, 0x00, 0xFF));
     pgf = vita2d_load_custom_pgf(FONTPGF);
@@ -104,27 +108,46 @@ int getinput() {
     memcpy(touch_old, touch, sizeof(touch_old)); 
     sceCtrlPeekBufferPositive(0, &pad, 1);
     sceTouchPeek(0, &touch[SCE_TOUCH_PORT_FRONT], 1);
-    if ( istouch_press == 0) {
+    sceTouchPeek(1, &touch[SCE_TOUCH_PORT_BACK], 1);
+    if ( istouch_press_f == 0) {
         if ( touch[SCE_TOUCH_PORT_FRONT].reportNum > 0 ) {
             memcpy(touch_press, touch, sizeof(touch_press));
-            touch_press_x = touch_press[SCE_TOUCH_PORT_FRONT].report[0].x;
-            touch_press_y = touch_press[SCE_TOUCH_PORT_FRONT].report[0].y;            
-            istouch_press = 1;
+            touch_press_fx = touch_press[SCE_TOUCH_PORT_FRONT].report[0].x;
+            touch_press_fy = touch_press[SCE_TOUCH_PORT_FRONT].report[0].y;            
+            istouch_press_f = 1;
         }
-    } else if ( istouch_press == 1 ) {
-        if (  touch[SCE_TOUCH_PORT_FRONT].reportNum <= 0 ) {
+    } else if ( istouch_press_f == 1 ) {
+        if ( touch[SCE_TOUCH_PORT_FRONT].reportNum <= 0 ) {
             memcpy(touch_release, touch_old, sizeof(touch_release));
-            touch_release_x = touch_release[SCE_TOUCH_PORT_FRONT].report[0].x;
-            touch_release_y = touch_release[SCE_TOUCH_PORT_FRONT].report[0].y;      
-            istouch_press = 0;
+            touch_release_fx = touch_release[SCE_TOUCH_PORT_FRONT].report[0].x;
+            touch_release_fy = touch_release[SCE_TOUCH_PORT_FRONT].report[0].y;      
+            istouch_press_f = 0;
         }
     }
-
+    if ( istouch_press_b == 0) {
+        if ( touch[SCE_TOUCH_PORT_BACK].reportNum > 0 ) {
+            memcpy(touch_press, touch, sizeof(touch_press));
+            touch_press_bx = touch_press[SCE_TOUCH_PORT_BACK].report[0].x;
+            touch_press_by = touch_press[SCE_TOUCH_PORT_BACK].report[0].y;            
+            istouch_press_b = 1;
+        }
+    } else if ( istouch_press_b == 1 ) {
+        if ( touch[SCE_TOUCH_PORT_BACK].reportNum <= 0 ) {
+            memcpy(touch_release, touch_old, sizeof(touch_release));
+            touch_release_bx = touch_release[SCE_TOUCH_PORT_BACK].report[0].x;
+            touch_release_by = touch_release[SCE_TOUCH_PORT_BACK].report[0].y;      
+            istouch_press_b = 0;
+        }
+    }
     int i = 0;
     for(i = 0; i < SCE_TOUCH_MAX_REPORT; i++) {
         if ( i < touch[SCE_TOUCH_PORT_FRONT].reportNum ) {
-            touch_x = touch[SCE_TOUCH_PORT_FRONT].report[i].x;
-            touch_y = touch[SCE_TOUCH_PORT_FRONT].report[i].y;
+            touch_fx = touch[SCE_TOUCH_PORT_FRONT].report[i].x;
+            touch_fy = touch[SCE_TOUCH_PORT_FRONT].report[i].y;
+        }
+        if ( i < touch[SCE_TOUCH_PORT_BACK].reportNum ) {
+            touch_bx = touch[SCE_TOUCH_PORT_BACK].report[i].x;
+            touch_by = touch[SCE_TOUCH_PORT_BACK].report[i].y;
         }
     }
     if (pad.buttons & SCE_CTRL_START) key_start = 1;
@@ -147,6 +170,12 @@ int getinput() {
 }
 
 int mainLogic() {
+    if ( key_L == 1 && key_start == 1 ) {
+        key_exit = 1;
+    }
+    if ( key_R == 1 ) {
+        hellocpp(errorStr);
+    }
     return 0;
 }
 
@@ -167,7 +196,7 @@ int innerLogic() {
 int showDebugInfo() {
     int key_step = 20, y = 520;
     int i= 1;
-    if (strlen(errorStr) > 0) vita2d_pgf_draw_text(pgf,400, 30,RGBA8(255,0,0,255),1.0f,errorStr);
+    if (strlen(errorStr) > 0) vita2d_pgf_draw_text(pgf, 20, 30,RGBA8(255,0,0,255),1.0f,errorStr);
     //left stick 
     sprintf(str, "[%03d,%03d]", lx, ly);
     vita2d_pgf_draw_text(pgf, key_step * i++, y -20, RGBA8(0,255,0,255), 1.0f, str);
@@ -271,8 +300,10 @@ int showDebugInfo() {
     sprintf(str, "[%03d,%03d]", rx, ry);
     vita2d_pgf_draw_text(pgf, key_step * i++, y - 20, RGBA8(0,255,0,255), 1.0f, str);
 
-    sprintf(str, "P[%04d,%04d]T[%04d,%04d]R[%04d,%04d]", touch_press_x,touch_press_y,touch_x,touch_y, touch_release_x, touch_release_y);
-    vita2d_pgf_draw_text(pgf, 10, y - 40, RGBA8(0,255,0,255), 1.0f, str);
+    sprintf(str, "FRONT:P[%04d,%04d]T[%04d,%04d]R[%04d,%04d]", touch_press_fx,touch_press_fy,touch_fx,touch_fy, touch_release_fx, touch_release_fy);
+    vita2d_pgf_draw_text(pgf, 10, y - 60, RGBA8(0,255,0,255), 1.0f, str);
+    sprintf(str, "BACK:P[%04d,%04d]T[%04d,%04d]R[%04d,%04d]", touch_press_bx,touch_press_by,touch_bx,touch_by, touch_release_bx, touch_release_by);
+    vita2d_pgf_draw_text(pgf, 10, y - 40, RGBA8(0,0,255,255), 1.0f, str);
     return 0;
 }
 
@@ -318,12 +349,12 @@ int main()
     initAll();
     while (1) {
         getinput();    
-        if (key_exit)
-            break;
         // innerLogic update things, and if graphic needed to update, need_update is set to 1.
         innerLogic();    
         if (!need_update) continue;
         doGraphic(); 
+        if (key_exit)
+            break;
     }
     graphicDestroy();
     sceKernelExitProcess(0);

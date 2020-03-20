@@ -2,7 +2,7 @@ DEBUG = n
 
 TITLE_ID = BSDVIEWER
 TARGET   = BSDViewer
-OBJS     = bsdViewer.o
+OBJS     = bsdViewer.o cppsample.o
 PSVITAIP = 192.168.50.82
 LIBS = -lvita2d -lSceDisplay_stub -lSceGxm_stub \
 	-lSceSysmodule_stub -lSceCtrl_stub -lSceTouch_stub -lScePgf_stub -lScePvf_stub \
@@ -10,6 +10,7 @@ LIBS = -lvita2d -lSceDisplay_stub -lSceGxm_stub \
 
 PREFIX  = arm-vita-eabi
 CC      = $(PREFIX)-gcc
+CXX     = $(PREFIX)-g++
 CFLAGS  = -Wl,-q -Wall -fno-lto
 ASFLAGS = $(CFLAGS)
 
@@ -20,6 +21,7 @@ else
 endif
 
 CFLAGS += $(DEBFLAGS)
+CXXFLAGS += -c -lstd=c++11
 
 LIVEAREA = -a sce_sys/icon0.png=sce_sys/icon0.png \
 		   -a sce_sys/livearea/contents/bg.png=sce_sys/livearea/contents/bg.png \
@@ -40,7 +42,10 @@ eboot.bin: $(TARGET).velf
 	vita-elf-create $< $@
 
 $(TARGET).elf: $(OBJS)
-	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
+
+%.o: %.cpp
+	${CXX}  -o $@ $< $(CXXFLAGS)
 
 %.o: %.png
 	$(PREFIX)-ld -r -b binary -o $@ $^
